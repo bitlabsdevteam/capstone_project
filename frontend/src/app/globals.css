@@ -1,0 +1,177 @@
+@import "tailwindcss";
+
+:root {
+  /* Base colors */
+  --background: #ffffff;
+  --foreground: #111827;
+  
+  /* Card and popover */
+  --card: #ffffff;
+  --card-foreground: #111827;
+  --popover: #ffffff;
+  --popover-foreground: #111827;
+  
+  /* Primary - using a blue shade similar to Lovable */
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  
+  /* Secondary */
+  --secondary: #f3f4f6;
+  --secondary-foreground: #111827;
+  
+  /* Muted */
+  --muted: #f3f4f6;
+  --muted-foreground: #6b7280;
+  
+  /* Accent */
+  --accent: #dbeafe;
+  --accent-foreground: #1e40af;
+  
+  /* Destructive */
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  
+  /* Border and input */
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --ring: #2563eb;
+  
+  /* Border radius */
+  --radius: 0.5rem;
+}
+
+/* Light mode styles */
+* {
+  color-scheme: light;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+/* Custom blob animation - smoother with easing */
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.05);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.95);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-blob {
+  animation: blob 12s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Gradient animation */
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient 15s ease infinite;
+}
+
+/* Enhanced shadow utilities */
+.shadow-3xl {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+}
+
+.shadow-soft {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+}
+
+.shadow-glow {
+  box-shadow: 0 0 15px rgba(37, 99, 235, 0.15);
+}
+
+/* Custom focus styles */
+.focus-visible:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Smooth transitions for all interactive elements */
+* {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+body {
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+  letter-spacing: -0.011em;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px; /* Ensures anchors aren't hidden behind fixed headers */
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground);
+  border-radius: 100px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* Additional utility classes */
+.text-balance {
+  text-wrap: balance;
+}
+
+.glass-effect {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.gradient-text {
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  background-image: linear-gradient(to right, var(--primary), #4f46e5);
+}
