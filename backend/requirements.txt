@@ -1,0 +1,51 @@
+# FastAPI and ASGI server
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# Pydantic for data validation
+pydantic>=2.7.4,<3.0.0
+pydantic-settings>=2.3.0
+
+# HTTP client for external API calls
+httpx==0.25.2
+
+# Environment and configuration
+python-dotenv==1.0.0
+
+# LangChain and LangGraph for AI workflows
+langgraph>=0.2.16
+langchain>=0.2.16
+langchain-core>=0.2.38
+langchain-community>=0.2.16
+langchain-google-genai>=1.0.0
+langgraph-supervisor>=0.0.29
+
+# Type hints and annotations
+typing-extensions>=4.8.0
+
+# System monitoring and health checks
+psutil>=5.9.6
+
+# Logging
+structlog>=23.2.0
+colorama>=0.4.6
+
+# Date and time handling
+python-dateutil>=2.8.2
+
+# JSON handling
+orjson>=3.9.10
+
+# Validation and utilities
+email-validator>=2.1.0
+
+# Authentication and security
+passlib[bcrypt]>=1.7.4
+python-jose[cryptography]>=3.3.0
+python-multipart>=0.0.6
+
+# Timezone handling
+pytz>=2023.3
+
+# Network utilities
+requests>=2.31.0
