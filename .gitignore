@@ -264,8 +264,17 @@ jspm_packages/
 
 # Docker
 .dockerignore
-Dockerfile*
-docker-compose*.yml
+# Allow essential Docker files for this project
+!Dockerfile.backend
+!backend/Dockerfile
+!frontend/Dockerfile
+!docker-compose.yml
+# Ignore other Docker files
+Dockerfile.dev
+Dockerfile.prod
+docker-compose.dev.yml
+docker-compose.prod.yml
+docker-compose.override.yml
 
 # OS generated files
 .DS_Store
