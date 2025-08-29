@@ -26,7 +26,9 @@ from core.exceptions import (
     general_exception_handler
 )
 from api.v1 import api_router as v1_router
+# Import from workflow instead of streaming
 from workflows.registry import WorkflowRegistry
+from workflows.manager import WorkflowManager
 
 # Initialize settings and logging
 settings = get_settings()
@@ -45,10 +47,27 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info(f"Environment: {settings.ENVIRONMENT}")
     logger.info(f"Debug mode: {settings.DEBUG}")
     
-    # Initialize workflow registry
+    # Initialize workflow registry with default workflows
     try:
-        workflow_registry = WorkflowRegistry()
-        logger.info(f"Initialized workflow registry with {len(workflow_registry.list_workflows())} workflows")
+        from workflows.registry import initialize_workflow_system, get_workflow_registry_info, get_workflow_registry
+        
+        initialize_workflow_system()
+        workflow_registry = get_workflow_registry()
+        registry_info = get_workflow_registry_info()
+        
+        logger.info(
+            f"Initialized workflow registry with {len(registry_info['workflow_types'])} workflow types: "
+            f"{', '.join(registry_info['workflow_types'])}"
+        )
+        
+        # Store registry in app state for access by endpoints
+        app.state.workflow_registry = workflow_registry
+        
+        # Initialize workflow manager
+        workflow_manager = WorkflowManager()
+        workflow_manager.registry = workflow_registry
+        app.state.workflow_manager = workflow_manager
+        
     except Exception as e:
         logger.error(f"Failed to initialize workflow registry: {str(e)}")
         raise

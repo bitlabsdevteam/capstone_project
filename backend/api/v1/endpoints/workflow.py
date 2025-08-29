@@ -4,7 +4,7 @@ This module provides REST API endpoints for workflow management and execution.
 """
 
 from typing import Dict, Any, List, Optional
-from fastapi import APIRouter, HTTPException, Depends, Query, Path, Body, status
+from fastapi import APIRouter, HTTPException, Depends, Query, Path, Body, status, Request
 from fastapi.responses import JSONResponse
 
 from core.logging import get_logger
@@ -34,13 +34,15 @@ logger = get_logger(__name__)
 # Create router
 router = APIRouter()
 
-# Global workflow manager instance
-workflow_manager = WorkflowManager()
-
-
 # Dependency to get workflow manager
-def get_workflow_manager() -> WorkflowManager:
-    """Get workflow manager instance"""
+def get_workflow_manager(request: Request) -> WorkflowManager:
+    """Get workflow manager instance from app state"""
+    workflow_manager = getattr(request.app.state, 'workflow_manager', None)
+    if workflow_manager is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Workflow manager not initialized"
+        )
     return workflow_manager
 
 
@@ -325,18 +327,22 @@ async def get_workflow(
     response_model=WorkflowExecutionResponse,
     status_code=status.HTTP_200_OK,
     summary="Execute workflow",
-    description="""Execute a workflow with the provided input data and configuration.
+    description="""Execute a workflow with a user prompt and optional configuration.
     
-    This endpoint starts the execution of a specified workflow with custom input data.
-    The execution can be performed synchronously or asynchronously based on the
-    execution_mode parameter.
+    This endpoint starts the execution of a specified workflow with a user prompt as input.
+    The workflow processes the user's natural language request and generates appropriate
+    responses or actions. Execution can be performed synchronously or asynchronously.
+    
+    **Input Requirements:**
+    - **user_prompt**: Natural language input describing the user's request (required)
+    - **input_data**: Optional additional structured data for context
     
     **Execution Modes:**
     - **sync**: Waits for completion and returns final results
     - **async**: Returns immediately with execution ID for status tracking
     
     **Features:**
-    - Input data validation against workflow schema
+    - Natural language processing of user prompts
     - Configurable timeout settings
     - Step-by-step execution tracking
     - Error handling and reporting
@@ -344,10 +350,10 @@ async def get_workflow(
     - Callback URL support for async executions
     
     **Best Practices:**
-    - Use async mode for long-running workflows
-    - Provide callback URLs for async execution notifications
-    - Set appropriate timeout values based on expected execution time
-    - Validate input data format before submission
+    - Provide clear, specific user prompts for better results
+    - Use async mode for complex or long-running requests
+    - Set appropriate timeout values based on expected processing time
+    - Include relevant context in optional input_data when needed
     """,
     responses={
         200: {
@@ -360,8 +366,10 @@ async def get_workflow(
                         "status": "running",
                         "execution_mode": "async",
                         "input_data": {
-                            "data": [1, 2, 3, 4, 5],
-                            "options": {"format": "json"}
+                            "user_prompt": "Create a bar chart showing sales data for Q1 2024",
+                            "execution_id": "exec_abc123def456",
+                            "execution_mode": "async",
+                            "timeout_seconds": 300
                         },
                         "output_data": None,
                         "steps": [
@@ -393,7 +401,7 @@ async def get_workflow(
             "content": {
                 "application/json": {
                     "example": {
-                        "detail": "Input data validation failed: missing required field 'data'"
+                        "detail": "Validation failed: user_prompt is required"
                     }
                 }
             }
@@ -415,7 +423,7 @@ async def get_workflow(
                     "example": {
                         "detail": [
                             {
-                                "loc": ["body", "input_data"],
+                                "loc": ["body", "user_prompt"],
                                 "msg": "field required",
                                 "type": "value_error.missing"
                             }
@@ -445,11 +453,12 @@ async def execute_workflow(
         max_length=100
     ),
     request: WorkflowExecuteRequest = Body(
-        description="Workflow execution request with input data and configuration",
+        description="Workflow execution request with user prompt and optional configuration",
         example={
+            "user_prompt": "Create a bar chart showing sales data for Q1 2024",
             "input_data": {
-                "data": [1, 2, 3, 4, 5],
-                "options": {"format": "json"}
+                "context": "quarterly_sales",
+                "format_preference": "interactive"
             },
             "execution_mode": "async",
             "timeout_seconds": 300,
@@ -466,8 +475,7 @@ async def execute_workflow(
         logger.info(
             f"Executing workflow: {workflow_name}",
             extra={
-                "workflow_name": workflow_name,
-                "execution_id": request.execution_id
+                "workflow_name": workflow_name
             }
         )
         

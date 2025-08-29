@@ -4,7 +4,7 @@ This module provides health monitoring endpoints for the FastAPI application.
 """
 
 from typing import Dict, Any
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Request
 from fastapi.responses import JSONResponse
 
 from core.logging import get_logger
@@ -18,14 +18,14 @@ logger = get_logger(__name__)
 router = APIRouter()
 
 
-def get_workflow_manager() -> WorkflowManager:
-    """Get workflow manager instance"""
-    return WorkflowManager()
+def get_workflow_manager(request: Request) -> WorkflowManager:
+    """Get workflow manager instance from app state"""
+    return request.app.state.workflow_manager
 
 
-def get_workflow_registry() -> WorkflowRegistry:
-    """Get workflow registry instance"""
-    return WorkflowRegistry()
+def get_workflow_registry(request: Request) -> WorkflowRegistry:
+    """Get workflow registry instance from app state"""
+    return request.app.state.workflow_registry
 
 
 @router.get(

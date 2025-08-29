@@ -1,20 +1,16 @@
 """Supervisor Agent for LangGraph Workflow Orchestration.
 
 This module implements a supervisor agent using the langgraph_supervisor pattern
-that manages worker agents for different tasks like research and math calculations.
+that manages worker agents for different tasks like research and information retrieval.
 
 The implementation follows the supervisor pattern with:
-- Simple worker agent functions
-- Tavily search integration for research
-- LLM-based math calculations
+- Worker agent integration
 - Supervisor workflow orchestration
 """
 
 import os
 from typing import Any, Dict, List, Optional, TypedDict
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_community.utilities.tavily_search import TavilySearchAPIWrapper
-from langchain.tools import Tool
 from langgraph_supervisor import create_supervisor
 from langgraph.graph import START, END
 from pydantic import BaseModel, Field
@@ -22,6 +18,7 @@ from pydantic import BaseModel, Field
 from core.logging import get_logger
 from core.exceptions import WorkflowException
 from core.config import get_settings
+from agents.research_agent import research_agent
 
 logger = get_logger(__name__)
 settings = get_settings()
@@ -37,18 +34,6 @@ llm = ChatGoogleGenerativeAI(
 )
 logger.info("Initialized Gemini LLM for supervisor workflow")
 
-# Initialize Tavily search tool (requires TAVILY_API_KEY environment variable)
-if not settings.TAVILY_API_KEY:
-    raise ValueError("TAVILY_API_KEY environment variable is required")
-
-tavily = TavilySearchAPIWrapper(tavily_api_key=settings.TAVILY_API_KEY)
-search_tool = Tool(
-    name="web_search",
-    func=lambda q: tavily.run(q),
-    description="Search the web for current information.",
-)
-logger.info("Initialized Tavily search tool for research agent")
-
 
 class SupervisorRequest(BaseModel):
     """Request model for supervisor agent."""
@@ -63,69 +48,18 @@ class SupervisorResponse(BaseModel):
     session_id: str = Field(..., description="Session identifier")
 
 
-# Worker agent classes
-class ResearchAgent:
-    """Research agent with web search capabilities."""
-    name = "research_agent"
-    
-    def __call__(self, state):
-        try:
-            # Get the latest user message
-            user_msg = state["messages"][-1]["content"]
-            logger.info(f"Research agent processing: {user_msg}")
-            
-            # Perform web search
-            tool_result = search_tool.run(user_msg)
-            
-            # Ask LLM to synthesize findings
-            resp = llm.invoke([
-                {"role": "system", "content": "Synthesize findings from the search text. Provide clear, factual information."}, 
-                {"role": "user", "content": tool_result}
-            ])
-            
-            return {"messages": [{"role": "assistant", "content": resp.content}]}
-        except Exception as e:
-            logger.error(f"Research agent error: {e}")
-            return {"messages": [{"role": "assistant", "content": f"Research failed: {str(e)}"}]}
-
-
-class MathAgent:
-    """Math agent for calculations and mathematical reasoning."""
-    name = "math_agent"
-    
-    def __call__(self, state):
-        try:
-            user_msg = state["messages"][-1]["content"]
-            logger.info(f"Math agent processing: {user_msg}")
-            
-            prompt = [
-                {"role": "system", "content": "You are a precise math solver. Show concise reasoning and provide accurate calculations."}, 
-                {"role": "user", "content": user_msg},
-            ]
-            
-            resp = llm.invoke(prompt)
-            return {"messages": [{"role": "assistant", "content": resp.content}]}
-        except Exception as e:
-            logger.error(f"Math agent error: {e}")
-            return {"messages": [{"role": "assistant", "content": f"Math calculation failed: {str(e)}"}]}
-
-
-# Create agent instances
-research_agent = ResearchAgent()
-math_agent = MathAgent()
-
-
 # Create the supervisor workflow
 supervisor_workflow = create_supervisor(
     model=llm,
-    agents=[research_agent, math_agent],
+    agents=[research_agent],
     # Routing policy and expectations
     prompt=(
-        "You are a supervisor managing two agents:\n"
-        "- research_agent: use it for any question requiring web research, facts, or current information.\n"
-        "- math_agent: use it for any computation, equations, math proofs, or numerical calculations.\n"
-        "Assign work to one agent at a time, do not call agents in parallel.\n"
-        "Do not do any work yourself—only delegate and summarize results for the user."
+        "You are a supervisor managing a research agent for Web3 application development:\n"
+        "- research_agent: use it for questions requiring web research about Web3, blockchain, Ethereum, smart contracts, and related technologies.\n"
+        "Analyze incoming prompts carefully:\n"
+        "1. If the prompt is related to building Web3 applications, delegate to the research agent.\n"
+        "2. If the prompt is NOT related to Web3 applications, respond with: 'Sorry, we are a platform for building Web3 applications'\n"
+        "For Web3-related queries, delegate to the research agent and summarize results for the user."
     ),
     add_handoff_back_messages=True,     # include full handoff context
     output_mode="full_history",         # return all turns for transparency
@@ -137,13 +71,12 @@ class SupervisorAgent:
     
     This agent manages worker agents for different tasks:
     - Research agent for web search and information gathering
-    - Math agent for calculations and mathematical reasoning
     """
     
     def __init__(self):
         """Initialize the supervisor agent."""
         self.workflow = supervisor_workflow
-        logger.info("Supervisor agent initialized with research and math agents")
+        logger.info("Supervisor agent initialized with research agent")
     
     async def process_request(self, message: str, session_id: Optional[str] = None) -> SupervisorResponse:
         """Process a user request through the supervisor workflow.
@@ -156,6 +89,23 @@ class SupervisorAgent:
             SupervisorResponse with conversation history and final response
         """
         try:
+            # Check if the message is related to Web3 using the LLM
+            web3_check_response = llm.invoke([
+                {"role": "system", "content": "You are a classifier that determines if a query is related to Web3 application development. Respond with 'YES' if it's related to Web3, blockchain, Ethereum, smart contracts, DApps, or other Web3 technologies. Otherwise, respond with 'NO'."}, 
+                {"role": "user", "content": message}
+            ])
+            
+            is_web3_related = "YES" in web3_check_response.content.upper()
+            
+            if not is_web3_related:
+                # If not Web3 related, return a direct response without using the workflow
+                rejection_message = "Sorry, we are a platform for building Web3 applications"
+                return SupervisorResponse(
+                    messages=[{"role": "assistant", "content": rejection_message}],
+                    final_response=rejection_message,
+                    session_id=session_id or "default_session"
+                )
+            
             # Create input for supervisor workflow
             inputs = {"messages": [{"role": "user", "content": message}]}
             
@@ -191,6 +141,7 @@ class SupervisorAgent:
             tavily_healthy = True
             try:
                 if settings.TAVILY_API_KEY:
+                    from agents.research_agent import tavily
                     tavily.run("test")
             except Exception:
                 tavily_healthy = False
@@ -202,10 +153,9 @@ class SupervisorAgent:
                 "components": {
                     "llm": llm_healthy,
                     "tavily_search": tavily_healthy,
-                    "research_agent": True,
-                    "math_agent": True
+                    "research_agent": True
                 },
-                "agents": ["research_agent", "math_agent"]
+                "agents": ["research_agent"]
             }
             
         except Exception as e:

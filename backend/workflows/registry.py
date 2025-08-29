@@ -1,131 +1,127 @@
-"""Workflow Registry for LangGraph workflows.
+#!/usr/bin/env python3
+"""
+Workflow Registry Module
 
-Simplified workflow registration following official LangGraph documentation patterns.
+This module provides the WorkflowRegistry class for registering and managing
+workflow types and instances.
 """
 
 import uuid
-from typing import Dict, Any, List, Optional, Type
+from typing import Dict, List, Any, Optional, Type
+from datetime import datetime
 
 from core.logging import get_logger
-from .base import BaseWorkflow, WorkflowConfig
+from core.exceptions import WorkflowNotFoundException
+from models.workflow import WorkflowResponse, WorkflowStatus
 
 logger = get_logger(__name__)
 
 
 class WorkflowRegistry:
-    """Registry for managing workflow classes and configurations"""
+    """Registry for workflow types and instances"""
     
     def __init__(self):
-        self._workflows: Dict[str, Type[BaseWorkflow]] = {}
-        self._configs: Dict[str, WorkflowConfig] = {}
-        self._instances: Dict[str, BaseWorkflow] = {}
-        self.logger = get_logger(f"{__name__}.WorkflowRegistry")
+        """Initialize the workflow registry"""
+        self._workflow_types = {}
+        self._workflow_instances = {}
+        self._workflow_instances_by_name = {}
     
+    def register_workflow_type(self, name: str, workflow_class: Any) -> None:
+        """Register a workflow type"""
+        self._workflow_types[name] = workflow_class
+        logger.info(f"Registered workflow type: {name}")
+    
+    def get_workflow_types(self) -> List[str]:
+        """Get list of registered workflow types"""
+        return list(self._workflow_types.keys())
+    
+    def get_workflow_class(self, workflow_type: str) -> Any:
+        """Get workflow class by type"""
+        if workflow_type not in self._workflow_types:
+            raise WorkflowNotFoundException(f"Workflow type not found: {workflow_type}")
+        return self._workflow_types[workflow_type]
+    
+    def register_workflow_instance(self, workflow: WorkflowResponse) -> None:
+        """Register a workflow instance"""
+        self._workflow_instances[workflow.id] = workflow
+        self._workflow_instances_by_name[workflow.name] = workflow
+        logger.info(f"Registered workflow instance: {workflow.name} (ID: {workflow.id})")
+    
+    def get_workflow_by_id(self, workflow_id: str) -> Optional[WorkflowResponse]:
+        """Get workflow instance by ID"""
+        return self._workflow_instances.get(workflow_id)
+    
+    def get_workflow_by_name(self, workflow_name: str) -> Optional[WorkflowResponse]:
+        """Get workflow instance by name"""
+        return self._workflow_instances_by_name.get(workflow_name)
+    
+    def get_all_workflows(self) -> List[WorkflowResponse]:
+        """Get all registered workflow instances"""
+        return list(self._workflow_instances.values())
+    
+    def update_workflow(self, workflow: WorkflowResponse) -> None:
+        """Update a workflow instance"""
+        if workflow.id not in self._workflow_instances:
+            raise WorkflowNotFoundException(f"Workflow not found: {workflow.id}")
+        
+        self._workflow_instances[workflow.id] = workflow
+        self._workflow_instances_by_name[workflow.name] = workflow
+        logger.info(f"Updated workflow: {workflow.name} (ID: {workflow.id})")
+    
+    def delete_workflow(self, workflow_id: str) -> None:
+        """Delete a workflow instance"""
+        if workflow_id not in self._workflow_instances:
+            raise WorkflowNotFoundException(f"Workflow not found: {workflow_id}")
+        
+        workflow = self._workflow_instances[workflow_id]
+        del self._workflow_instances[workflow_id]
+        del self._workflow_instances_by_name[workflow.name]
+        logger.info(f"Deleted workflow: {workflow.name} (ID: {workflow_id})")
 
+
+# ============================================================================
+# Global Registry Functions
+# ============================================================================
+
+# Global registry instance
+_workflow_registry = None
+
+
+def get_workflow_registry() -> WorkflowRegistry:
+    """Get the global workflow registry instance"""
+    global _workflow_registry
+    if _workflow_registry is None:
+        _workflow_registry = WorkflowRegistry()
+    return _workflow_registry
+
+
+def register_default_workflows() -> None:
+    """Register default workflow types with the registry"""
+    registry = get_workflow_registry()
     
-    def register(
-        self,
-        workflow_class: Type[BaseWorkflow],
-        config: Optional[WorkflowConfig] = None
-    ) -> str:
-        """Register a workflow class"""
-        if not issubclass(workflow_class, BaseWorkflow):
-            raise ValueError(f"Workflow class must inherit from BaseWorkflow")
-        
-        # Create instance to get metadata
-        temp_instance = workflow_class(config or WorkflowConfig())
-        workflow_name = temp_instance.name
-        
-        # Generate unique ID
-        workflow_id = f"{workflow_name}_{uuid.uuid4().hex[:8]}"
-        
-        # Store workflow class and config
-        self._workflows[workflow_name] = workflow_class
-        self._configs[workflow_name] = config or WorkflowConfig()
-        
-        # Create and store instance
-        self._instances[workflow_name] = temp_instance
-        
-        self.logger.info(
-            f"Registered workflow: {workflow_name}",
-            extra={
-                "workflow_id": workflow_id,
-                "workflow_class": workflow_class.__name__
-            }
-        )
-        
-        return workflow_id
+    # Import workflow classes here to avoid circular imports
+    try:
+        from .workflow import SupervisorFrontendWorkflow
+        registry.register_workflow_type("supervisor_frontend_workflow", SupervisorFrontendWorkflow)
+        logger.info("Registered default workflow: supervisor_frontend_workflow")
+    except ImportError as e:
+        logger.warning(f"Could not register supervisor_frontend_workflow: {e}")
     
-    def unregister(self, workflow_name: str) -> bool:
-        """Unregister a workflow"""
-        if workflow_name not in self._workflows:
-            return False
-        
-        del self._workflows[workflow_name]
-        del self._configs[workflow_name]
-        del self._instances[workflow_name]
-        
-        self.logger.info(f"Unregistered workflow: {workflow_name}")
-        return True
-    
-    def get_workflow(self, workflow_name: str) -> Optional[BaseWorkflow]:
-        """Get a workflow instance by name"""
-        if workflow_name not in self._instances:
-            return None
-        
-        # Return a fresh instance with the registered config
-        workflow_class = self._workflows[workflow_name]
-        config = self._configs[workflow_name]
-        
-        return workflow_class(config)
-    
-    def get_workflow_class(self, workflow_name: str) -> Optional[Type[BaseWorkflow]]:
-        """Get a workflow class by name"""
-        return self._workflows.get(workflow_name)
-    
-    def get_config(self, workflow_name: str) -> Optional[WorkflowConfig]:
-        """Get workflow configuration by name"""
-        return self._configs.get(workflow_name)
-    
-    def is_registered(self, workflow_name: str) -> bool:
-        """Check if a workflow is registered"""
-        return workflow_name in self._workflows
-    
-    def list_workflows(self) -> List[Dict[str, Any]]:
-        """List all registered workflows"""
-        workflows = []
-        
-        for workflow_name, workflow_class in self._workflows.items():
-            instance = self._instances[workflow_name]
-            config = self._configs[workflow_name]
-            
-            workflows.append({
-                "id": f"{workflow_name}_{uuid.uuid4().hex[:8]}",
-                "name": workflow_name,
-                "description": instance.description,
-                "version": instance.version,
-                "class_name": workflow_class.__name__,
-                "config": config.to_dict()
-            })
-        
-        return workflows
-    
-    def get_workflow_names(self) -> List[str]:
-        """Get list of registered workflow names"""
-        return list(self._workflows.keys())
-    
-    def clear(self) -> None:
-        """Clear all registered workflows"""
-        self._workflows.clear()
-        self._configs.clear()
-        self._instances.clear()
-        
-        self.logger.info("Cleared all registered workflows")
-    
-    def get_statistics(self) -> Dict[str, Any]:
-        """Get registry statistics"""
-        return {
-            "total_registered": len(self._workflows),
-            "workflow_names": list(self._workflows.keys()),
-            "workflow_classes": [cls.__name__ for cls in self._workflows.values()]
-        }
+    logger.info("Default workflows registration completed")
+
+
+def initialize_workflow_system() -> None:
+    """Initialize the workflow system with default workflows"""
+    logger.info("Initializing workflow system...")
+    register_default_workflows()
+    logger.info("Workflow system initialized successfully")
+
+
+def get_workflow_registry_info() -> Dict[str, Any]:
+    """Get information about the workflow registry"""
+    registry = get_workflow_registry()
+    return {
+        "workflow_types": registry.get_workflow_types(),
+        "total_instances": len(registry.get_all_workflows()),
+        "registry_status": "active"
+    }

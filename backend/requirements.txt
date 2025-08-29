@@ -17,6 +17,7 @@ langgraph>=0.2.16
 langchain>=0.2.16
 langchain-core>=0.2.38
 langchain-community>=0.2.16
+langchain-openai>=0.1.0
 langchain-google-genai>=1.0.0
 langgraph-supervisor>=0.0.29
 
