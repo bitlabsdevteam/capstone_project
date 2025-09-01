@@ -118,7 +118,7 @@ const getRoutingDecisionDisplay = (decision: string) => {
 
 const Web3SupervisorDemo: React.FC = () => {
   const [state, actions] = useWeb3Supervisor({
-    apiBaseUrl: process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000',
+    apiBaseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
     enableWebSocket: true,
     autoConnect: false,
     onValidationComplete: (result) => {

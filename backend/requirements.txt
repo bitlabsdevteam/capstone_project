@@ -1,52 +1,42 @@
-# FastAPI and ASGI server
+# Core FastAPI and dependencies
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
 
-# Pydantic for data validation
-pydantic>=2.7.4,<3.0.0
-pydantic-settings>=2.3.0
+# Database
+sqlalchemy==2.0.23
+alembic==1.13.1
+psycopg2-binary==2.9.9
+aiosqlite==0.19.0
 
-# HTTP client for external API calls
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+
+# HTTP Client
 httpx==0.25.2
+aiohttp==3.9.1
 
-# Environment and configuration
+# Utilities
 python-dotenv==1.0.0
+typing-extensions==4.8.0
+email-validator==2.1.0
 
-# LangChain and LangGraph for AI workflows
-langgraph>=0.2.16
-langchain>=0.2.16
-langchain-core>=0.2.38
-langchain-community>=0.2.16
-langchain-openai>=0.1.0
-langchain-google-genai>=1.0.0
-langgraph-supervisor>=0.0.29
+# Development & Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+black==23.11.0
+isort==5.12.0
+flake8==6.1.0
+mypy==1.7.1
 
-# Type hints and annotations
-typing-extensions>=4.8.0
+# Monitoring & Logging
+prometheus-client==0.19.0
+structlog==23.2.0
 
-# System monitoring and health checks
-psutil>=5.9.6
-
-# Logging
-structlog>=23.2.0
-colorama>=0.4.6
-
-# Date and time handling
-python-dateutil>=2.8.2
-
-# JSON handling
-orjson>=3.9.10
-
-# Validation and utilities
-email-validator>=2.1.0
-
-# Authentication and security
-passlib[bcrypt]>=1.7.4
-python-jose[cryptography]>=3.3.0
-python-multipart>=0.0.6
-
-# Timezone handling
-pytz>=2023.3
-
-# Network utilities
-requests>=2.31.0
+# Middleware & CORS
+slowapi==0.1.9
+starlette==0.27.0

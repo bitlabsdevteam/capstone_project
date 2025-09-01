@@ -80,22 +80,26 @@ export function PromptInput({
     setIsSubmitting(true);
     try {
       // Call the supervisor workflow API endpoint
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
-      const response = await fetch(`${apiBaseUrl}/api/v1/supervisor/build`, {
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiBaseUrl}/api/v1/workflows/supervisor_frontend_workflow/execute`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          prompt: data.prompt,
-          priority: 1,
-          requirements: {
-            framework: 'React',
-            blockchain: 'Ethereum',
-            features: [],
-            llm_provider: 'gemini',
-            model: 'gemini-pro'
-          }
+          user_prompt: data.prompt,
+          input_data: {
+            requirements: {
+              framework: 'React',
+              blockchain: 'Ethereum',
+              features: [],
+              llm_provider: 'gemini',
+              model: 'gemini-pro'
+            },
+            priority: 1
+          },
+          execution_mode: 'async',
+          timeout_seconds: 300
         })
       });
 
@@ -104,7 +108,7 @@ export function PromptInput({
       }
 
       const result = await response.json();
-      console.log('Supervisor workflow result:', result);
+      console.log('Workflow execution started:', result);
       
       if (onSubmit) {
         await onSubmit(data.prompt);

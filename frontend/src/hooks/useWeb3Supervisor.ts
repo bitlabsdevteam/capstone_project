@@ -113,7 +113,7 @@ export interface UseWeb3SupervisorOptions {
 }
 
 const DEFAULT_OPTIONS: UseWeb3SupervisorOptions = {
-  apiBaseUrl: process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000',
+  apiBaseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
   enableWebSocket: true,
   enableSSE: false,
   autoConnect: false,
